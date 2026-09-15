@@ -1,0 +1,18 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // AGENTS.md is discovered natively by opencode, so it is not listed here.
+  "skills": {
+    "paths": ["skills"]
+  },
+  "mcp": {
+    "kuaiqus-psu": {
+      "type": "local",
+      // Use "python" instead of "python3" on Windows installs that only ship the
+      // python.exe launcher.
+      "command": ["python3", "scripts/kuaiqus_psu_mcp.py"],
+      "enabled": true
+      // To enable backend auto-start, add:
+      // "environment": { "KUAIQUS_PSU_SERIAL_PORT": "COM6" }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+# Normalize every text file to LF in the repository and in each checkout, so the
+# Git for Windows default (core.autocrlf=true) can never rewrite line endings and
+# report "LF will be replaced by CRLF" warnings. The tooling targets pwsh 7+ on
+# Windows, Linux, and macOS, all of which read LF-only scripts without issue.
+* text=auto eol=lf
+
+# Images are binary; keep them byte-for-byte untouched.
+*.jpg binary

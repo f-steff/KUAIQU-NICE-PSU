@@ -1,0 +1,18 @@
+# Scratch worktrees created by agent workflows.
+.worktrees/
+
+# Python bytecode caches.
+__pycache__/
+*.py[cod]
+
+# Optional local virtual environment (pyserial is the only dependency, and it is
+# usually installed from the OS package manager instead - see docs/development.md).
+.venv/
+
+# Local machine state: backend discovery file and remembered session values.
+scripts/.kuaiqus_psu_backend.state.json
+scripts/kuaiqus_psu.ini
+
+# Backend stdout/stderr capture (every platform: the frontend keeps it so a failed
+# start can explain itself) and any other logs.
+*.log
