@@ -83,14 +83,21 @@ class SerialTransport:
             raise RuntimeError("pyserial is not installed. Install it with: pip install pyserial")
         if not self.port:
             raise RuntimeError("no serial port given (--port)")
-        self._serial = serial.Serial(
-            port=self.port,
-            baudrate=self.baud,
-            bytesize=serial.EIGHTBITS,
-            parity=serial.PARITY_NONE,
-            stopbits=serial.STOPBITS_ONE,
-            timeout=0.05,
-        )
+        # Build the port unopened so RTS/DTR can be deasserted before it opens.
+        # pyserial asserts both by default; on an RS-485 adapter RTS often
+        # controls the transmit direction, and holding it asserted keeps the
+        # driver enabled so replies are never heard. USB and RS-232 links are
+        # unaffected. This follows a bench lesson from a sibling driver.
+        self._serial = serial.Serial()
+        self._serial.port = self.port
+        self._serial.baudrate = self.baud
+        self._serial.bytesize = serial.EIGHTBITS
+        self._serial.parity = serial.PARITY_NONE
+        self._serial.stopbits = serial.STOPBITS_ONE
+        self._serial.timeout = 0.05
+        self._serial.rts = False
+        self._serial.dtr = False
+        self._serial.open()
         # Drop anything the previous session left in the driver buffer so the first
         # response cannot be mistaken for a stale frame.
         self._serial.reset_input_buffer()

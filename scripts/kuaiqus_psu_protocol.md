@@ -42,6 +42,10 @@ COM port to software.
 | Parity | none |
 | Stop bits | 1 |
 
+The backend deasserts RTS and DTR before opening the port. On many RS-485
+adapters RTS is the transmit-direction control; leaving it asserted keeps the
+driver enabled and the reply is never heard. USB and RS-232 links are unaffected.
+
 ---
 
 ## Frame structure
@@ -237,6 +241,12 @@ Remote control mode:  <09100000000>
 Local control mode:   <09200000000>
 ```
 
+> **Firmware difference.** On the V1.3 bench unit these frames are silent. A
+> V3.00 SPPS-S305-232 acknowledges the documented 091/092 forms with
+> `<19OK0000001>` / `<19OK0000000>`; the vendor PC app's `<09000000000>`, used
+> for both link and unlink, is silent there. Do not depend on an acknowledgement
+> either way.
+
 The vendor manual shows remote mode being entered before the first set commands,
 and the vendor PC software sends it before any set command ("needed for set
 commands"):
@@ -333,9 +343,11 @@ wrong, followed by the observed reality.
    Both were blank in the manual. Function `6` returns `V1.300000`; function `5`
    returns nothing for every tested data field. See the command reference above.
 
-7. **Set commands are acknowledged; the rest are silent.**
-   Set voltage/current return `<11OK0000000>` / `<13OK0000000>`. Power on/off,
-   remote/local mode, and disconnect return no response (fire-and-forget).
+7. **Set commands are acknowledged; the rest are normally silent.**
+   Set voltage/current return `<11OK0000000>` / `<13OK0000000>`. Power on/off
+   and the function-9 mode switch return no response on the V1.3 unit. A V3.00
+   unit also acknowledges the documented 091/092 forms with `<19OK0000001>` /
+   `<19OK0000000>`, so do not depend on silence.
 
 8. **Remote mode is required for set commands.**
    The vendor software sends `<09100000000>` (remote control mode) before any set
@@ -393,7 +405,7 @@ the voltmeter calibration; the exact payloads were not recorded.
 The codec deliberately exposes only documented commands, and `5` is known to be
 dead. No calibration or service commands are documented.
 
-### Address vs padding (bench evidence on V1.3)
+### Address vs padding (bench evidence)
 
 This reference treats the last three data characters as literal `000` padding.
 An alternative reading is a 3-digit device address. Normal traffic uses `000`,
@@ -412,11 +424,17 @@ TX <06000000001>   RX <16V1.300000>   (tail 001)
 ```
 
 Every tail produced the same response, so **the trailing digits are ignored on
-read queries on this firmware**. That is evidence for the padding reading and
-against an address filter, at least for reads. It does not prove the tail is
-padding for writes, and it does not settle other firmware generations (the V3.00
-SPPS-S305-232 could differ). On this unit, a non-zero tail is not a way to
-silence the read path.
+read queries on this firmware**. A safe write test agrees: setting 0 V with the
+output off produced `<11OK0000000>` for tails `000`, `001`, and `255`. On this
+unit, a non-zero tail is not a way to silence either the read or the write path.
+
+The same field behaves differently on a V3.00 SPPS-S305-232: its read replies end
+`...001` while remote control is linked and `...000` after unlink, and the
+documented 091/092 forms are acknowledged with `<19OK0000001>` /
+`<19OK0000000>`. So in the reply direction the field tracks remote/local state,
+not a device address. The vendor PC software's "485 Add" box still suggests the
+field is a device address in RS-485 multi-drop requests; that use is untested
+here. This codec always sends `000` and implements no addressing.
 
 ### If the unit goes silent
 
@@ -425,11 +443,13 @@ silence the read path.
 2. **Check the port and driver.** Confirm the CP2102 port with `-ListPorts`, and
    make sure no other process (including a second backend) owns it.
 3. **Address scan (last resort).** The V1.3 bench unit ignores the trailing
-   digits on reads, so a changed address is not a supported failure mode there.
-   If the vendor confirms that another firmware generation uses that field as an
-   address, the bounded search is 5 baud rates x 256 addresses - a few minutes of
-   scripted probing. This tool does not implement address scanning. Stay within
-   the documented function codes above; do not walk the function characters.
+   digits on both reads and writes, so a changed address is not a supported
+   failure mode there. The V3.00 unit uses the reply tail as a link-state flag,
+   which is not an address either. If the vendor confirms that RS-485 multi-drop
+   uses the field as a device address, the bounded search is 5 baud rates x 256
+   addresses - a few minutes of scripted probing. This tool does not implement
+   address scanning. Stay within the documented function codes above; do not
+   walk the function characters.
 
 ---
 

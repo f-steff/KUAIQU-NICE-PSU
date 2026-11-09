@@ -189,10 +189,15 @@ Malformed JSON is answered with `{"ok":false,"error":"invalid JSON request"}`.
 - Frames are built by `kuaiqus_psu_protocol.py`; the backend only owns transport
   and lifecycle. See [kuaiqus_psu_protocol.md](kuaiqus_psu_protocol.md) for the
   wire format.
+- The serial transport deasserts RTS and DTR before opening the port. On RS-485
+  adapters RTS often controls the transmit direction; leaving it asserted can
+  keep the driver enabled so replies are never heard.
 - Set commands wait for the `<11OK...>` / `<13OK...>` acknowledgement and fail
   if it does not arrive within `--timeout-ms`.
-- `powerOn`, `powerOff`, `connect`, and `disconnect` are fire-and-forget: the
-  manual documents no acknowledgement for them.
+- `powerOn`, `powerOff`, `connect`, and `disconnect` are normally
+  fire-and-forget: the V1.3 unit acknowledges none of them. A V3.00 unit
+  acknowledges connect/disconnect with `<19OK...>`, but the backend does not
+  wait for it.
 - The value field uses **millivolt/milliamp** units (six digits + `"000"`); see the
   protocol reference for the corrected scaling.
 

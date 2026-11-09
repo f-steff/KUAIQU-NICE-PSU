@@ -1053,9 +1053,11 @@ function Get-ComPorts {
 }
 
 # Actively probe a single port for the PSU. Returns $true when a framed '<'..'>'
-# response is observed after the connect + read-voltage query. This opens the
-# port directly, so it must not be used while the backend owns it: the open then
-# fails and the port is simply reported as not the PSU.
+# response is observed. Discovery is deliberately read-only: it sends function 2
+# (and function 6 only if that is silent) and never enters remote mode, so a scan
+# cannot lock the front panel of a PSU on another port. This opens the port
+# directly, so it must not be used while the backend owns it: the open then fails
+# and the port is simply reported as not the PSU.
 function Test-PsuPort([string]$Port, [int]$Baud = 9600) {
     $serial = New-Object System.IO.Ports.SerialPort
     $serial.PortName = $Port
@@ -1067,42 +1069,33 @@ function Test-PsuPort([string]$Port, [int]$Baud = 9600) {
     $serial.WriteTimeout = 500
     try {
         $serial.Open()
-        # Connect handshake then read-voltage query. The device flushes a frame
-        # when the next one starts within ~3.5 character times, so pause between
-        # the two writes.
-        $serial.Write("<09100000000>")
-        Start-Sleep -Milliseconds 100
-        $serial.Write("<02000000000>")
-        $deadline = (Get-Date).AddMilliseconds(1500)
-        $sawFrame = $false
-        while ((Get-Date) -lt $deadline) {
-            try {
-                $byte = $serial.ReadByte()
-                if ($byte -eq 60) { # '<'
-                    $sawFrame = $true
+        # Try the read-voltage query first, then read-version. Both are pure
+        # reads; the second only matters for a unit whose voltage read is
+        # unavailable. The protocol requires an inter-frame gap, and the
+        # timeout provides it.
+        foreach ($frame in @("<02000000000>", "<06000000000>")) {
+            $serial.DiscardInBuffer()
+            $serial.Write($frame)
+            $deadline = (Get-Date).AddMilliseconds(1200)
+            while ((Get-Date) -lt $deadline) {
+                try {
+                    $byte = $serial.ReadByte()
+                    if ($byte -eq 60) { # '<'
+                        return $true
+                    }
+                }
+                catch {
                     break
                 }
             }
-            catch {
-                break
-            }
         }
-        return $sawFrame
+        return $false
     }
     catch {
         return $false
     }
     finally {
         if ($serial.IsOpen) {
-            # Return the device to local (front-panel) control so the keyboard is
-            # not left locked in remote mode after probing.
-            try {
-                $serial.Write("<09200000000>")
-                Start-Sleep -Milliseconds 100
-            }
-            catch {
-                # Best effort; the port may already be in a bad state.
-            }
             $serial.Close()
         }
         $serial.Dispose()

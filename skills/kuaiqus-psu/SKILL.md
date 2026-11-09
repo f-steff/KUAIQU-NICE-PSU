@@ -97,7 +97,8 @@ is `scripts/kuaiqus_psu_protocol.md`. On Linux/macOS invoke the script through
 - Run `-Status` before direct hardware work. If a backend is already running it
   owns the port, so `-Connect` reuses it instead of opening the port twice.
 - `-ListPorts` is offline and never opens a port unless `-Probe` is given. A scan
-  cannot open a port the backend already owns; stop the backend first.
+  uses read-only queries and never enters remote mode, so it cannot lock a front
+  panel. It cannot open a port the backend already owns; stop the backend first.
 - On Linux/macOS the detached backend writes its output to
   `scripts/.kuaiqus_psu_backend.out.log` and
   `scripts/.kuaiqus_psu_backend.err.log` when troubleshooting.

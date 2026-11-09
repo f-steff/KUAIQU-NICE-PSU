@@ -103,11 +103,12 @@ COM7 CP2102   Silicon Labs CP210x USB to UART Bridge (COM7)
 - **macOS** prefers `/dev/cu.*` (call-out devices that do not block waiting for a
   carrier) over `/dev/tty.*`.
 
-`-ListPorts -Probe` opens each candidate at 9600 8N1, sends the connect +
-read-voltage frames, and adds a `Psu` column (`True` when the port answered).
-Debug ports (XDS110/JTAG) are skipped, and a probed device is returned to local
-(front-panel) control afterwards. A port already owned by the backend fails to
-open and is simply reported `Psu = False`; stop the backend before scanning.
+`-ListPorts -Probe` opens each candidate at 9600 8N1 and sends only read
+queries (read voltage, then read version if the first is silent); it never enters
+remote mode, so it cannot lock a front panel. It adds a `Psu` column (`True`
+when the port answered). Debug ports (XDS110/JTAG) are skipped. A port already
+owned by the backend fails to open and is simply reported `Psu = False`; stop
+the backend before scanning.
 
 With `-Json`, both forms emit machine-readable output; `driverless` is present
 only when a driverless CP2102 was found:
@@ -199,8 +200,9 @@ Port                                                                            
 /dev/serial/by-id/usb-WeAct_Studio_USB2CANV1_ComPort_AAAD203D387C-if00                           usb-WeAct_Studi...
 ```
 
-`-ListPorts -Probe` adds a `Psu` column by briefly opening each candidate. It
-cannot open a port the backend already owns, so run it **before** `-Connect`:
+`-ListPorts -Probe` adds a `Psu` column by briefly opening each candidate with
+read-only queries (it never switches the device to remote mode). It cannot open
+a port the backend already owns, so run it **before** `-Connect`:
 
 ```
 $ ./scripts/kuaiqus_psu.ps1 -ListPorts -Probe
@@ -618,10 +620,10 @@ returns it to local control and unlocks the panel.
 ```
 
 `-Disconnect` stops the backend and clears the tracked set values.
-`-ListPorts -Probe` also sends the local-mode frame before closing.
+`-ListPorts -Probe` never enters remote mode, so it cannot lock the front panel.
 
 > If the front panel stays locked after `-Disconnect`, power-cycle the PSU - the
-> firmware can get stuck, for example after probing.
+> firmware can get stuck, for example after an interrupted session.
 
 ## Options
 
