@@ -365,9 +365,10 @@ The protocol is shared across the SPPS family, but firmware generations differ:
 | SPPS-S305-232 | 30 V / 5 A | V3.00 | Same protocol; reported from another bench |
 
 On the healthy SPPS3010D bench unit, function `2` returned `10.000 V` and
-`25.000 V` with the output enabled in CV, matching the commanded values. This
-codec applies no scale factor: the raw milli-unit value is used directly. The
-complete frames captured on the bench were:
+`25.000 V` with the output enabled in CV, matching the commanded values (a
+multimeter on the terminals confirmed both points). This codec applies no scale
+factor: the raw milli-unit value is used directly. The complete frames captured
+on the bench were:
 
 ```text
 TX <02000000000>   RX <12010000000>   -> 10,000 mV = 10.000 V (CV)
@@ -392,17 +393,30 @@ the voltmeter calibration; the exact payloads were not recorded.
 The codec deliberately exposes only documented commands, and `5` is known to be
 dead. No calibration or service commands are documented.
 
-### Address vs padding (unresolved)
+### Address vs padding (bench evidence on V1.3)
 
 This reference treats the last three data characters as literal `000` padding.
 An alternative reading is a 3-digit device address. Normal traffic uses `000`,
-where both interpretations produce identical bytes, so observation alone cannot
-distinguish them. The codec always sends `000` and implements no addressing.
+where both interpretations produce identical bytes.
 
-If the address interpretation is correct on some firmware, a unit whose address
-changed would ignore frames sent to `000`. That is one possible cause of a unit
-that suddenly stops answering; a baud-rate mismatch is the other and more common
-cause.
+A read-only bench test on the SPPS3010D (V1.3) varied only that tail:
+
+```text
+TX <02000000000>   RX <12000000000>   (tail 000, output off)
+TX <02000000001>   RX <12000000000>   (tail 001)
+TX <02000000002>   RX <12000000000>   (tail 002)
+TX <02000000100>   RX <12000000000>   (tail 100)
+TX <02000000255>   RX <12000000000>   (tail 255)
+TX <06000000000>   RX <16V1.300000>   (tail 000)
+TX <06000000001>   RX <16V1.300000>   (tail 001)
+```
+
+Every tail produced the same response, so **the trailing digits are ignored on
+read queries on this firmware**. That is evidence for the padding reading and
+against an address filter, at least for reads. It does not prove the tail is
+padding for writes, and it does not settle other firmware generations (the V3.00
+SPPS-S305-232 could differ). On this unit, a non-zero tail is not a way to
+silence the read path.
 
 ### If the unit goes silent
 
@@ -410,12 +424,12 @@ cause.
    and 19200 baud (default 9600). A mismatch is the most likely cause of silence.
 2. **Check the port and driver.** Confirm the CP2102 port with `-ListPorts`, and
    make sure no other process (including a second backend) owns it.
-3. **Bounded recovery search.** If a non-zero device address is the cause, the
-   search space is 5 baud rates x 256 addresses - a few minutes of scripted
-   probing rather than an unknown space. This tool does not implement address
-   scanning yet. While investigating, stay within the documented function codes
-   above; do not walk the function characters. Ask the vendor for the address and
-   calibration procedure before writing to an unknown address.
+3. **Address scan (last resort).** The V1.3 bench unit ignores the trailing
+   digits on reads, so a changed address is not a supported failure mode there.
+   If the vendor confirms that another firmware generation uses that field as an
+   address, the bounded search is 5 baud rates x 256 addresses - a few minutes of
+   scripted probing. This tool does not implement address scanning. Stay within
+   the documented function codes above; do not walk the function characters.
 
 ---
 
