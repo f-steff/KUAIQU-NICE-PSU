@@ -153,6 +153,9 @@ macOS device naming.
 - The output ramps on a soft-start after enable and, with no load, discharges
   slowly when the setpoint is lowered - allow it to settle before asserting a
   value.
+- Do not send undocumented function codes. On an SPPS-S305-232, codes `C`, `E`,
+  `F`, `H`, and `I` behaved as writes, and one is suspected of altering the
+  voltmeter calibration. See the protocol reference for details.
 
 ## Related documentation
 

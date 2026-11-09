@@ -44,6 +44,12 @@ FUNC_POWER_ON = 7
 FUNC_POWER_OFF = 8
 FUNC_CONNECT = 9
 
+# Only the documented codes above are exposed. A bench report on an SPPS-S305-232
+# (firmware V3.00) found that undocumented codes C, E, F, H and I return "OK" and
+# behave as writes; one of them is suspected of corrupting the voltmeter
+# calibration. Never add encoders for them.
+
+
 # The 9-character data field carries a value in milli-units (voltage in millivolts,
 # current in milliamperes) as six right-aligned, zero-padded digits followed by three
 # literal "000" padding characters. This matches the vendor PC software's "{:07.3f}"

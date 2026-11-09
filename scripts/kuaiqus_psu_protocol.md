@@ -355,6 +355,63 @@ wrong, followed by the observed reality.
 
 ---
 
+## Firmware variants and field reports
+
+The protocol is shared across the SPPS family, but firmware generations differ:
+
+| Model | Output | Firmware | Notes |
+| --- | --- | --- | --- |
+| SPPS3010D | 30 V / 10 A | V1.3 (`V1.300000`) | Bench unit for this reference |
+| SPPS-S305-232 | 30 V / 5 A | V3.00 | Same protocol; reported from another bench |
+
+On the healthy SPPS3010D bench unit, function `2` returned `10.000 V` and
+`25.000 V` with the output enabled in CV, matching the commanded values. This
+codec applies no scale factor: the raw milli-unit value is used directly.
+
+A second bench reported an SPPS-S305-232 whose front panel and function `2`
+readback were both about **9.3x low with no offset** (31 V displayed as 3.34 V),
+while the output itself regulated accurately. That is consistent with lost
+voltmeter gain calibration, not a protocol scaling difference. No software
+correction is applied here, and none should be added without the vendor's
+calibration procedure.
+
+### Undocumented function codes - do not probe
+
+On the affected SPPS-S305-232, function codes `C`, `E`, `F`, `H`, and `I`
+returned `OK` and behaved as writes. One of them is suspected of having altered
+the voltmeter calibration; the exact payloads were not recorded.
+
+**Never send function codes outside `1`, `2`, `3`, `4`, `6`, `7`, `8`, `9`.**
+The codec deliberately exposes only documented commands, and `5` is known to be
+dead. No calibration or service commands are documented.
+
+### Address vs padding (unresolved)
+
+This reference treats the last three data characters as literal `000` padding.
+An alternative reading is a 3-digit device address. Normal traffic uses `000`,
+where both interpretations produce identical bytes, so observation alone cannot
+distinguish them. The codec always sends `000` and implements no addressing.
+
+If the address interpretation is correct on some firmware, a unit whose address
+changed would ignore frames sent to `000`. That is one possible cause of a unit
+that suddenly stops answering; a baud-rate mismatch is the other and more common
+cause.
+
+### If the unit goes silent
+
+1. **Check the baud rate first.** The device supports 1200, 2400, 4800, 9600,
+   and 19200 baud (default 9600). A mismatch is the most likely cause of silence.
+2. **Check the port and driver.** Confirm the CP2102 port with `-ListPorts`, and
+   make sure no other process (including a second backend) owns it.
+3. **Bounded recovery search.** If a non-zero device address is the cause, the
+   search space is 5 baud rates x 256 addresses - a few minutes of scripted
+   probing rather than an unknown space. This tool does not implement address
+   scanning yet. While investigating, stay within the documented function codes
+   above; do not walk the function characters. Ask the vendor for the address and
+   calibration procedure before writing to an unknown address.
+
+---
+
 ## Reference
 
 - Vendor: Shenzhen Borui Communication Technology Co., Ltd.
