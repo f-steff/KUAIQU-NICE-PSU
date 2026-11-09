@@ -366,7 +366,14 @@ The protocol is shared across the SPPS family, but firmware generations differ:
 
 On the healthy SPPS3010D bench unit, function `2` returned `10.000 V` and
 `25.000 V` with the output enabled in CV, matching the commanded values. This
-codec applies no scale factor: the raw milli-unit value is used directly.
+codec applies no scale factor: the raw milli-unit value is used directly. The
+complete frames captured on the bench were:
+
+```text
+TX <02000000000>   RX <12010000000>   -> 10,000 mV = 10.000 V (CV)
+TX <06000000000>   RX <16V1.300000>   -> firmware V1.300000 = V1.3
+TX <02000000000>   RX <12025000000>   -> 25,000 mV = 25.000 V (CV)
+```
 
 A second bench reported an SPPS-S305-232 whose front panel and function `2`
 readback were both about **9.3x low with no offset** (31 V displayed as 3.34 V),
